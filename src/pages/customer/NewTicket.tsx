@@ -51,8 +51,12 @@ export default function NewTicket() {
 
     setLoading(true);
 
-    // Using a demo customer_id since auth is removed
-    const demoCustomerId = '00000000-0000-0000-0000-000000000000';
+    // Generate a unique guest ID for anonymous ticket submission
+    let guestId = localStorage.getItem('guest_customer_id');
+    if (!guestId) {
+      guestId = crypto.randomUUID();
+      localStorage.setItem('guest_customer_id', guestId);
+    }
 
     const { data, error } = await supabase
       .from('tickets')
@@ -61,7 +65,7 @@ export default function NewTicket() {
         description: formData.description,
         category: formData.category,
         priority: formData.priority,
-        customer_id: demoCustomerId,
+        customer_id: guestId,
       })
       .select()
       .single();

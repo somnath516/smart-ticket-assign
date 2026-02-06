@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TicketWithRelations, TicketStatus } from '@/types/database';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Loader2, Inbox } from 'lucide-react';
+import { Plus, Search, Loader2, Inbox, Sparkles, ArrowRight, CheckCircle2, Clock } from 'lucide-react';
 
 export default function CustomerPortal() {
   const [tickets, setTickets] = useState<TicketWithRelations[]>([]);
@@ -42,14 +42,11 @@ export default function CustomerPortal() {
   const fetchTickets = async () => {
     const { data, error } = await supabase
       .from('tickets')
-      .select(`
-        *,
-        assigned_operator:profiles!tickets_assigned_operator_id_fkey(*)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      setTickets(data as unknown as TicketWithRelations[]);
+      setTickets(data as TicketWithRelations[]);
     }
     setLoading(false);
   };
@@ -75,57 +72,108 @@ export default function CustomerPortal() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">My Tickets</h1>
-            <p className="text-sm text-muted-foreground">
-              Track and manage your support requests
-            </p>
+      <div className="space-y-8">
+        {/* Hero Section */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-8 text-primary-foreground shadow-xl">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                <span className="text-sm font-medium opacity-90">Welcome back</span>
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight">Support Center</h1>
+              <p className="text-primary-foreground/80 max-w-md">
+                Track your support requests, get updates, and communicate with our team in real-time.
+              </p>
+            </div>
+            <Link to="/portal/new">
+              <Button 
+                size="lg" 
+                className="bg-white text-primary hover:bg-white/90 shadow-lg gap-2 font-semibold"
+              >
+                <Plus className="h-5 w-5" />
+                New Ticket
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </Link>
           </div>
-          <Link to="/portal/new">
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              New Ticket
-            </Button>
-          </Link>
+          
+          {/* Stats */}
+          <div className="relative z-10 mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="bg-white/10 backdrop-blur rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Clock className="h-4 w-4 opacity-70" />
+                <span className="text-sm font-medium opacity-80">Active</span>
+              </div>
+              <p className="text-2xl font-bold">{activeCount}</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <CheckCircle2 className="h-4 w-4 opacity-70" />
+                <span className="text-sm font-medium opacity-80">Resolved</span>
+              </div>
+              <p className="text-2xl font-bold">{resolvedCount}</p>
+            </div>
+          </div>
         </div>
 
         {/* Search */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="relative max-w-md">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search tickets..."
+            placeholder="Search tickets by title, description, or number..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-11 h-12 text-base bg-card border-border/50 shadow-sm focus-visible:ring-primary/20"
           />
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'resolved')}>
-          <TabsList>
-            <TabsTrigger value="active">
-              Active ({activeCount})
+          <TabsList className="bg-muted/50 p-1">
+            <TabsTrigger value="active" className="data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2">
+              <Clock className="h-4 w-4" />
+              Active
+              <span className="bg-primary/10 text-primary text-xs font-semibold px-2 py-0.5 rounded-full">
+                {activeCount}
+              </span>
             </TabsTrigger>
-            <TabsTrigger value="resolved">
-              Resolved ({resolvedCount})
+            <TabsTrigger value="resolved" className="data-[state=active]:bg-card data-[state=active]:shadow-sm gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Resolved
+              <span className="bg-muted text-muted-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
+                {resolvedCount}
+              </span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="active" className="mt-4">
+          <TabsContent value="active" className="mt-6">
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+                  <Loader2 className="relative h-10 w-10 animate-spin text-primary" />
+                </div>
+                <p className="mt-4 text-sm text-muted-foreground">Loading your tickets...</p>
               </div>
             ) : filteredTickets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Inbox className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="font-medium">No active tickets</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {searchQuery ? 'No tickets match your search' : 'Submit a new ticket to get started'}
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="bg-muted/50 rounded-full p-6 mb-4">
+                  <Inbox className="h-12 w-12 text-muted-foreground/50" />
+                </div>
+                <h3 className="font-semibold text-lg">No active tickets</h3>
+                <p className="text-muted-foreground mt-1 max-w-sm">
+                  {searchQuery ? 'No tickets match your search criteria' : 'Need help? Submit a new ticket and our team will assist you.'}
                 </p>
+                {!searchQuery && (
+                  <Link to="/portal/new" className="mt-4">
+                    <Button className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Create your first ticket
+                    </Button>
+                  </Link>
+                )}
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -136,17 +184,23 @@ export default function CustomerPortal() {
             )}
           </TabsContent>
 
-          <TabsContent value="resolved" className="mt-4">
+          <TabsContent value="resolved" className="mt-6">
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+                  <Loader2 className="relative h-10 w-10 animate-spin text-primary" />
+                </div>
+                <p className="mt-4 text-sm text-muted-foreground">Loading your tickets...</p>
               </div>
             ) : filteredTickets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Inbox className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="font-medium">No resolved tickets</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {searchQuery ? 'No tickets match your search' : 'Resolved tickets will appear here'}
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="bg-muted/50 rounded-full p-6 mb-4">
+                  <CheckCircle2 className="h-12 w-12 text-muted-foreground/50" />
+                </div>
+                <h3 className="font-semibold text-lg">No resolved tickets</h3>
+                <p className="text-muted-foreground mt-1 max-w-sm">
+                  {searchQuery ? 'No tickets match your search criteria' : 'Your resolved and closed tickets will appear here.'}
                 </p>
               </div>
             ) : (
