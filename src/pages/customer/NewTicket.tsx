@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -29,7 +28,6 @@ const priorities: { value: TicketPriority; label: string; description: string }[
 ];
 
 export default function NewTicket() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -42,7 +40,7 @@ export default function NewTicket() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user || !formData.category) {
+    if (!formData.category) {
       toast({
         title: 'Error',
         description: 'Please fill in all required fields',
@@ -53,6 +51,9 @@ export default function NewTicket() {
 
     setLoading(true);
 
+    // Using a demo customer_id since auth is removed
+    const demoCustomerId = '00000000-0000-0000-0000-000000000000';
+
     const { data, error } = await supabase
       .from('tickets')
       .insert({
@@ -60,7 +61,7 @@ export default function NewTicket() {
         description: formData.description,
         category: formData.category,
         priority: formData.priority,
-        customer_id: user.id,
+        customer_id: demoCustomerId,
       })
       .select()
       .single();

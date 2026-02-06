@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { TicketCard } from '@/components/tickets/TicketCard';
@@ -10,7 +9,6 @@ import { TicketWithRelations, TicketStatus, TicketPriority } from '@/types/datab
 import { Search, Loader2, Inbox } from 'lucide-react';
 
 export default function OperatorQueue() {
-  const { user } = useAuth();
   const [tickets, setTickets] = useState<TicketWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,39 +16,33 @@ export default function OperatorQueue() {
   const [activeTab, setActiveTab] = useState<'active' | 'resolved'>('active');
 
   useEffect(() => {
-    if (user) {
-      fetchTickets();
+    fetchTickets();
 
-      const channel = supabase
-        .channel('operator-queue')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'tickets',
-            filter: `assigned_operator_id=eq.${user.id}`,
-          },
-          () => fetchTickets()
-        )
-        .subscribe();
+    const channel = supabase
+      .channel('operator-queue')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tickets',
+        },
+        () => fetchTickets()
+      )
+      .subscribe();
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [user]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const fetchTickets = async () => {
-    if (!user) return;
-
     const { data } = await supabase
       .from('tickets')
       .select(`
         *,
         customer:profiles!tickets_customer_id_fkey(*)
       `)
-      .eq('assigned_operator_id', user.id)
       .order('priority', { ascending: false })
       .order('created_at', { ascending: true });
 
@@ -84,9 +76,9 @@ export default function OperatorQueue() {
     <AppLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-semibold">My Queue</h1>
+          <h1 className="text-2xl font-semibold">Ticket Queue</h1>
           <p className="text-sm text-muted-foreground">
-            All tickets assigned to you
+            All tickets in the system
           </p>
         </div>
 
@@ -134,7 +126,7 @@ export default function OperatorQueue() {
                 <p className="text-sm text-muted-foreground mt-1">
                   {searchQuery || priorityFilter !== 'all' 
                     ? 'Try adjusting your filters' 
-                    : 'No active tickets assigned to you'}
+                    : 'No active tickets'}
                 </p>
               </div>
             ) : (

@@ -1,31 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PriorityBadge } from '@/components/tickets/PriorityBadge';
 import { StatusBadge } from '@/components/tickets/StatusBadge';
 import { CategoryBadge } from '@/components/tickets/CategoryBadge';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { toast } from '@/hooks/use-toast';
 import { TicketWithRelations, TicketComment, Profile } from '@/types/database';
 import { formatDistanceToNow, format } from 'date-fns';
-import { ArrowLeft, Loader2, Send, User, Clock, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Loader2, User, Clock, MessageSquare } from 'lucide-react';
 
 export default function TicketDetail() {
   const { id } = useParams<{ id: string }>();
-  const { user, role } = useAuth();
   const [ticket, setTicket] = useState<TicketWithRelations | null>(null);
   const [comments, setComments] = useState<(TicketComment & { author?: Profile })[]>([]);
-  const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-
-  const linkPrefix = role === 'customer' ? '/portal' : role === 'operator' ? '/operator' : '/manager';
 
   useEffect(() => {
     if (id) {
@@ -92,43 +84,11 @@ export default function TicketDetail() {
         author:profiles!ticket_comments_author_id_fkey(*)
       `)
       .eq('ticket_id', id)
+      .eq('is_internal', false)
       .order('created_at', { ascending: true });
 
     if (!error && data) {
-      // Filter internal comments for customers
-      const filtered = role === 'customer' 
-        ? data.filter(c => !c.is_internal)
-        : data;
-      setComments(filtered as unknown as (TicketComment & { author?: Profile })[]);
-    }
-  };
-
-  const handleSubmitComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !id || !newComment.trim()) return;
-
-    setSubmitting(true);
-
-    const { error } = await supabase
-      .from('ticket_comments')
-      .insert({
-        ticket_id: id,
-        author_id: user.id,
-        content: newComment.trim(),
-        is_internal: false,
-      });
-
-    setSubmitting(false);
-
-    if (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to post comment',
-        variant: 'destructive',
-      });
-    } else {
-      setNewComment('');
-      fetchComments();
+      setComments(data as unknown as (TicketComment & { author?: Profile })[]);
     }
   };
 
@@ -155,7 +115,7 @@ export default function TicketDetail() {
           <p className="text-muted-foreground mt-2">
             This ticket may not exist or you don't have access to it.
           </p>
-          <Link to={linkPrefix}>
+          <Link to="/portal">
             <Button className="mt-4">Go back</Button>
           </Link>
         </div>
@@ -167,7 +127,7 @@ export default function TicketDetail() {
     <AppLayout>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Back Button */}
-        <Link to={linkPrefix}>
+        <Link to="/portal">
           <Button variant="ghost" size="sm" className="gap-2">
             <ArrowLeft className="h-4 w-4" />
             Back
@@ -247,11 +207,6 @@ export default function TicketDetail() {
                             <span className="text-xs text-muted-foreground">
                               {format(new Date(comment.created_at), 'MMM d, h:mm a')}
                             </span>
-                            {comment.is_internal && (
-                              <span className="text-xs bg-warning/10 text-warning px-1.5 py-0.5 rounded">
-                                Internal
-                              </span>
-                            )}
                           </div>
                           <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
                         </div>
@@ -259,35 +214,6 @@ export default function TicketDetail() {
                     ))}
                   </div>
                 )}
-
-                <Separator />
-
-                {/* Add Comment Form */}
-                <form onSubmit={handleSubmitComment} className="space-y-3">
-                  <Textarea
-                    placeholder="Add a comment..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    disabled={submitting}
-                    rows={3}
-                  />
-                  <div className="flex justify-end">
-                    <Button 
-                      type="submit" 
-                      disabled={submitting || !newComment.trim()}
-                      size="sm"
-                    >
-                      {submitting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Send className="h-4 w-4 mr-2" />
-                          Send
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </form>
               </CardContent>
             </Card>
           </div>
