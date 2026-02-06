@@ -1,59 +1,51 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { TicketCard } from '@/components/tickets/TicketCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Ticket, TicketWithRelations, TicketStatus } from '@/types/database';
+import { TicketWithRelations, TicketStatus } from '@/types/database';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Loader2, Inbox } from 'lucide-react';
 
 export default function CustomerPortal() {
-  const { user } = useAuth();
   const [tickets, setTickets] = useState<TicketWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'active' | 'resolved'>('active');
 
   useEffect(() => {
-    if (user) {
-      fetchTickets();
-      
-      // Set up realtime subscription
-      const channel = supabase
-        .channel('customer-tickets')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'tickets',
-            filter: `customer_id=eq.${user.id}`,
-          },
-          () => {
-            fetchTickets();
-          }
-        )
-        .subscribe();
+    fetchTickets();
+    
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('customer-tickets')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tickets',
+        },
+        () => {
+          fetchTickets();
+        }
+      )
+      .subscribe();
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [user]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const fetchTickets = async () => {
-    if (!user) return;
-    
     const { data, error } = await supabase
       .from('tickets')
       .select(`
         *,
         assigned_operator:profiles!tickets_assigned_operator_id_fkey(*)
       `)
-      .eq('customer_id', user.id)
       .order('created_at', { ascending: false });
 
     if (!error && data) {

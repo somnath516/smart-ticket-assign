@@ -1,70 +1,51 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TicketWithRelations, OperatorSkillRecord, Profile } from '@/types/database';
-import { Ticket, Users, Clock, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { TicketWithRelations } from '@/types/database';
+import { Ticket, Users, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TicketCard } from '@/components/tickets/TicketCard';
 
 export default function OperatorDashboard() {
-  const { user } = useAuth();
   const [tickets, setTickets] = useState<TicketWithRelations[]>([]);
-  const [skills, setSkills] = useState<OperatorSkillRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      fetchData();
-      
-      // Realtime subscription
-      const channel = supabase
-        .channel('operator-tickets')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'tickets',
-            filter: `assigned_operator_id=eq.${user.id}`,
-          },
-          () => fetchData()
-        )
-        .subscribe();
+    fetchData();
+    
+    // Realtime subscription
+    const channel = supabase
+      .channel('operator-tickets')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tickets',
+        },
+        () => fetchData()
+      )
+      .subscribe();
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [user]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const fetchData = async () => {
-    if (!user) return;
-
-    // Fetch assigned tickets
+    // Fetch all tickets for demo (no auth)
     const { data: ticketsData } = await supabase
       .from('tickets')
       .select(`
         *,
         customer:profiles!tickets_customer_id_fkey(*)
       `)
-      .eq('assigned_operator_id', user.id)
       .order('priority', { ascending: false })
       .order('created_at', { ascending: true });
 
     if (ticketsData) {
       setTickets(ticketsData as unknown as TicketWithRelations[]);
-    }
-
-    // Fetch operator skills
-    const { data: skillsData } = await supabase
-      .from('operator_skills')
-      .select('*')
-      .eq('user_id', user.id);
-
-    if (skillsData) {
-      setSkills(skillsData as OperatorSkillRecord[]);
     }
 
     setLoading(false);
@@ -138,12 +119,12 @@ export default function OperatorDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Skills</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{skills.length}</div>
-              <p className="text-xs text-muted-foreground">Technical areas</p>
+              <div className="text-2xl font-bold">{tickets.length}</div>
+              <p className="text-xs text-muted-foreground">All tickets</p>
             </CardContent>
           </Card>
         </div>

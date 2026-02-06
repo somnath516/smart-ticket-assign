@@ -1,34 +1,25 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PriorityBadge } from '@/components/tickets/PriorityBadge';
 import { StatusBadge } from '@/components/tickets/StatusBadge';
 import { CategoryBadge } from '@/components/tickets/CategoryBadge';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { TicketWithRelations, TicketComment, Profile, TicketStatus } from '@/types/database';
 import { formatDistanceToNow, format } from 'date-fns';
-import { ArrowLeft, Loader2, Send, User, Clock, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Loader2, User, Clock, MessageSquare } from 'lucide-react';
 
 export default function OperatorTicketDetail() {
   const { id } = useParams<{ id: string }>();
-  const { user, role } = useAuth();
-  const navigate = useNavigate();
   const [ticket, setTicket] = useState<TicketWithRelations | null>(null);
   const [comments, setComments] = useState<(TicketComment & { author?: Profile })[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [isInternal, setIsInternal] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
   useEffect(() => {
@@ -82,7 +73,7 @@ export default function OperatorTicketDetail() {
   };
 
   const handleStatusChange = async (newStatus: TicketStatus) => {
-    if (!ticket || !user) return;
+    if (!ticket) return;
 
     setUpdatingStatus(true);
 
@@ -110,32 +101,6 @@ export default function OperatorTicketDetail() {
     } else {
       toast({ title: 'Status updated', description: `Ticket is now ${newStatus.replace('_', ' ')}` });
       fetchTicket();
-    }
-  };
-
-  const handleSubmitComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !id || !newComment.trim()) return;
-
-    setSubmitting(true);
-
-    const { error } = await supabase
-      .from('ticket_comments')
-      .insert({
-        ticket_id: id,
-        author_id: user.id,
-        content: newComment.trim(),
-        is_internal: isInternal,
-      });
-
-    setSubmitting(false);
-
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to post comment', variant: 'destructive' });
-    } else {
-      setNewComment('');
-      setIsInternal(false);
-      fetchComments();
     }
   };
 
@@ -245,33 +210,6 @@ export default function OperatorTicketDetail() {
                     ))}
                   </div>
                 )}
-
-                <Separator />
-
-                <form onSubmit={handleSubmitComment} className="space-y-3">
-                  <Textarea
-                    placeholder="Add a comment..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    disabled={submitting}
-                    rows={3}
-                  />
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="internal"
-                        checked={isInternal}
-                        onCheckedChange={(checked) => setIsInternal(checked === true)}
-                      />
-                      <Label htmlFor="internal" className="text-sm text-muted-foreground">
-                        Internal note (hidden from customer)
-                      </Label>
-                    </div>
-                    <Button type="submit" disabled={submitting || !newComment.trim()} size="sm">
-                      {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4 mr-2" />Send</>}
-                    </Button>
-                  </div>
-                </form>
               </CardContent>
             </Card>
           </div>
